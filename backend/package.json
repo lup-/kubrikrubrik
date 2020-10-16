@@ -1,0 +1,24 @@
+{
+  "name": "hrello",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lup-/jobbo.git"
+  },
+  "author": "Alexander Pavlov <lup.mail@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lup-/jobbo/issues"
+  },
+  "homepage": "https://github.com/lup-/jobbo#readme",
+  "dependencies": {
+    "@koa/router": "^9.4.0",
+    "koa": "^2.13.0"
+  }
+}
