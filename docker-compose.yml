@@ -3,7 +3,7 @@ version: "3"
 services:
   nginx:
     image: nginx
-    container_name: 'jobbo_nginx'
+    container_name: 'kubrik_nginx'
     ports:
       - ${PORT}:80
     volumes:
@@ -14,9 +14,10 @@ services:
 
   backend:
     image: node
-    container_name: 'jobbo_backend'
+    container_name: 'kubrik_backend'
     ports:
-      - 3000:3000
+      - ${BACKEND_PORT}:3000
+      - ${BACKEND_DEBUG_PORT}:9229
     depends_on:
       - mongo
     volumes:
@@ -24,13 +25,33 @@ services:
     working_dir: /var/www
     environment:
       - NODE_ENV=development
-      - MONGO_HOST=jobbo_mongo
-      - MONGO_DB=jobbo
-    command: npm run start
+      - MONGO_HOST=kubrik_mongo
+      - MONGO_DB=kubrik
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+    command: npm run debug
+
+  bot:
+    image: node
+    container_name: 'kubrik_bot'
+    ports:
+      - ${BOT_DEBUG_PORT}:9229
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend:/var/www
+    working_dir: /var/www
+    environment:
+      - NODE_ENV=development
+      - MONGO_HOST=kubrik_mongo
+      - MONGO_DB=kubrik
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+    command: npm run bot_debug
 
   mongo:
     image: mongo
-    container_name: 'jobbo_mongo'
+    container_name: 'kubrik_mongo'
     volumes:
       - ./etc/database:/data/db
     ports:
