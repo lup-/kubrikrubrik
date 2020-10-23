@@ -40,7 +40,7 @@ export default {
             await axios.post(`/api/message/delete`, {id: message.id});
 
             if (state.message.id === message.id) {
-                return commit('setMessage', false);
+                commit('setMessage', false);
             }
 
             return dispatch('reloadMessages');

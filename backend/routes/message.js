@@ -46,14 +46,25 @@ module.exports = {
         const messages = db.collection('messages');
 
         let messageFields = ctx.request.body.message;
+        let messageText = messageFields.text;
+
         if (!messageFields.id) {
             messageFields.id = shortid.generate();
         }
 
         const id = messageFields.id;
+        let isNew = !Boolean(id);
 
         if (messageFields._id) {
             delete messageFields._id;
+        }
+
+        if (!isNew) {
+            try {
+                let updatedApiMessage = kubrikBot.updateMessage(messageFields.telegramId, messageText);
+                messageFields.apiMessage = updatedApiMessage;
+            }
+            catch (e) {}
         }
 
         let updateResult = await messages.findOneAndReplace({id}, messageFields, {upsert: true, returnOriginal: false});
@@ -81,6 +92,11 @@ module.exports = {
 
         let updateResult = await messages.findOneAndReplace({id}, messageFields, {returnOriginal: false});
         let message = updateResult.value || false;
+
+        try {
+            await kubrikBot.deleteMessage(messageFields.telegramId);
+        }
+        catch (e) {}
 
         ctx.body = {message};
         return next();

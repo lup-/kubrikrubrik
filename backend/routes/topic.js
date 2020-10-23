@@ -37,7 +37,7 @@ module.exports = {
 
         const topics = db.collection('topics');
         let filteredTopics = await topics.find(filter).toArray();
-        let allTopics = await topics.find({}).toArray();
+        let allTopics = await topics.find(defaultFilter).toArray();
 
         let foundTree = makeTree(allTopics).filter(treeTopTopic => filteredTopics.findIndex(topic => topic.id === treeTopTopic.id) !== -1);
 

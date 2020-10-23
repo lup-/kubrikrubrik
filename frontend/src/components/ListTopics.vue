@@ -19,7 +19,11 @@
                 ></v-treeview>
             </v-col>
             <v-col cols="9" v-if="!isEmpty">
-                <view-topic :input-topic="selectedTopics[0]" v-if="selectedTopics && selectedTopics.length > 0" :key="selectedTopics[0].id"></view-topic>
+                <view-topic v-if="selectedTopics && selectedTopics.length > 0"
+                        :input-topic="selectedTopics[0]"
+                        :key="selectedTopics[0].id"
+                        @delete="selectedTopics = []"
+                ></view-topic>
             </v-col>
         </v-row>
         <v-btn

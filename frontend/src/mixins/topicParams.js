@@ -53,6 +53,7 @@ export default {
         async deleteTopic() {
             this.isLoading = true;
             await this.$store.dispatch('deleteTopic', this.topic);
+            this.$emit('delete');
             this.isLoading = false;
             this.updateTopicState();
         }

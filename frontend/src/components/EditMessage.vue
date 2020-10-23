@@ -18,7 +18,7 @@
                                     no-data-text="Тем не найдено"
                             >
                             </v-autocomplete>
-                            <div v-html="message.text"></div>
+                            <v-textarea v-model="message.text" label="Текст поста"></v-textarea>
                         </v-form>
                     </v-card-text>
                     <v-card-actions>
