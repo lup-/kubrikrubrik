@@ -186,9 +186,9 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             const emptyChar = '‎';
             let imageUrl = imageData.url;
 
-            text += parseMode.toLocaleLowerCase() === 'html'
+            text = (parseMode.toLocaleLowerCase() === 'html'
                 ? `<a href="${imageUrl}>${emptyChar}</a>`
-                : `[${emptyChar}](${imageUrl})`;
+                : `[${emptyChar}](${imageUrl})`)+text;
 
             return text
         },
