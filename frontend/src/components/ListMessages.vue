@@ -1,14 +1,15 @@
 <template>
-    <v-container class="fill-height" fluid :class="{'align-start': !isEmpty && !isLoading}">
-        <v-row :align="isEmpty || isLoading ? 'center' : 'start'" :justify="isEmpty || isLoading ? 'center' : 'start'">
-            <v-progress-circular v-if="isLoading"
-                :size="70"
-                :width="7"
-                indeterminate
-            ></v-progress-circular>
+    <v-container class="fill-height align-start" fluid>
+        <v-row class="fill-height">
+            <v-col cols="12" v-if="isLoading" class="d-flex fill-height align-center justify-center">
+                <v-progress-circular
+                        :size="70"
+                        :width="7"
+                        indeterminate
+                ></v-progress-circular>
+            </v-col>
 
-            <v-col cols="12" class="text-center" v-if="isEmpty && !isLoading">Сообщений не найдено</v-col>
-            <v-col cols="3" v-if="!isEmpty">
+            <v-col cols="3">
                 <v-treeview
                     :items="topicsTree"
                     v-model="selectedTopics"
@@ -18,6 +19,7 @@
                     hoverable
                 ></v-treeview>
             </v-col>
+            <v-col cols="9" class="text-center d-flex fill-height align-center justify-center" v-if="isEmpty && !isLoading">Сообщений не найдено</v-col>
             <v-col cols="9" v-if="!isEmpty">
                 <view-message :input-message="message" v-for="message in messages" :key="message.id"></view-message>
             </v-col>
