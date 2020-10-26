@@ -86,6 +86,10 @@ export default {
 
                 return state.allMessages.filter(message => {
                     let messageTopics = message.topics || [];
+                    if ( !(messageTopics instanceof Array) ) {
+                        return false;
+                    }
+
                     let intersectIds = messageTopics.filter(topicId => topicIds.includes(topicId));
 
                     return intersectIds.length > 0;
