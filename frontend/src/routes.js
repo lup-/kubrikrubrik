@@ -5,7 +5,7 @@ import ViewTopicStandalone from "@/components/ViewTopicStandalone";
 import MessageForm from "@/components/MessageForm";
 import ListMessages from "@/components/ListMessages";
 import EditMessage from "@/components/EditMessage";
-
+import EditSettings from "@/components/EditSettings";
 
 export default [
     { name: 'home', path: '/', component: ListTopics },
@@ -16,4 +16,5 @@ export default [
     { name: 'sendMessage', path: '/message/new', component: MessageForm },
     { name: 'editMessage', path: '/message/edit/:messageId', component: EditMessage },
     { name: 'listMessages', path: '/message/list', component: ListMessages },
+    { name: 'editSettings', path: '/settings/edit', component: EditSettings },
 ];

@@ -1,33 +1,73 @@
 const Telegram = require('telegraf/telegram');
+const imgbbUploader = require('imgbb-uploader');
 const getDb = require('./Database');
 const makeTree = require('../modules/makeTree');
 const shortid = require('shortid');
 const moment = require('moment');
-const chatId = process.env.CHAT_ID;
+const tempWrite = require('temp-write');
+const fs = require('fs');
 
 let botInstance = false;
 
-function KubrikBot(token) {
-    const telegram = new Telegram(token);
-    const settings = {
-        'buttonColumns': 2,
+const defaultSettings = {
+    'buttonColumns': 2,
+    'defaultParseMode': 'MarkdownV2',
 
-        'homeButtonText': '🏠 Домой',
-        'linksButtonText': '📖 Ссылки',
-        'randomButtonText': '\u2728 Наудачу',
-        'backButtonText': '\u2b05 Назад',
-        'searchButtonText': '🔍 Поиск',
+    'homeButtonText': '🏠 Домой',
+    'linksButtonText': '📖 Показать ссылки',
+    'randomButtonText': '\u2728 Наудачу',
+    'backButtonText': '\u2b05 Назад',
+    'searchButtonText': '🔍 Поиск',
 
-        'homeMessage': 'Выбери себе',
-        'topicMessage': 'Тема "%name%"',
-        'notFoundMessage': 'Посты не найдены',
-        'postsListMessage': '*Посты*:\n',
-        'postsListRowMessage': '- [%name%](%url%)',
-        'randomPostMessage': '*Случайный пост*:\n[%name%](%url%)',
-        'searchMessage': 'Отправь мне сообщение и я всегда найду подходящие ссылки:',
-    };
+    'reloadMessage': 'Перегрузил настройки',
+    'homeMessage': 'Выбери рубрику',
+    'topicMessage': 'Тема "%name%"',
+    'notFoundMessage': 'Посты не найдены',
+    'postsListMessage': '*Посты*:\n',
+    'postsListRowMessage': '- [%name%](%url%)',
+    'randomPostMessage': '*Случайный пост*:\n[%name%](%url%)',
+    'searchMessage': 'Отправь мне сообщение и я всегда найду подходящие ссылки:',
+};
+
+async function loadSettings() {
+    const db = await getDb();
+    const settingsStore = db.collection('settings');
+    let loadedSettings = await settingsStore.find({}).toArray();
+    if (loadedSettings.length === 0) {
+        loadedSettings = [{}];
+    }
+    return Object.assign(defaultSettings, loadedSettings[0]);
+}
+
+function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
+    const telegram = new Telegram(telegramToken);
 
     return {
+        loadSettings,
+
+        async reloadSettings() {
+            const db = await getDb();
+            db.refreshInstance();
+
+            settings = await loadSettings(settings);
+        },
+
+        async saveSettings(newSettings) {
+            const db = await getDb();
+            const settingsStore = db.collection('settings');
+            let filter = {};
+            let settingsToSave = Object.assign(settings, newSettings);
+
+            if (settingsToSave) {
+                filter = {'_id': settingsToSave['_id']};
+                delete settingsToSave['_id'];
+            }
+
+            let updateResult = await settingsStore.findOneAndReplace(filter, settingsToSave, {upsert: true, returnOriginal: false});
+
+            return updateResult.value || false;
+        },
+
         getSettings(code = false) {
             if (!code) {
                 return settings;
@@ -50,7 +90,9 @@ function KubrikBot(token) {
             const db = await getDb();
             const topics = db.collection('topics');
 
-            let allTopics = await topics.find({}).toArray();
+            let allTopics = await topics.find({
+                deleted: {$in: [null, false]},
+            }).toArray();
             let childTopics = makeTree(allTopics, parentId);
 
             return childTopics;
@@ -119,19 +161,71 @@ function KubrikBot(token) {
             return randomMessage[0];
         },
 
-        async updateMessage(messageId, text) {
-            return telegram.editMessageText(chatId, messageId, null, text);
+        async uploadImage(imageBuffer) {
+            let uploadedImage = false;
+
+            try {
+                const imagePath = tempWrite.sync(imageBuffer);
+                uploadedImage = await imgbbUploader(imgbbToken, imagePath);
+                fs.unlinkSync(imagePath);
+            }
+            catch (e) {}
+
+            return uploadedImage;
+        },
+
+        getTextWithImage(text, imageData, parseMode) {
+            if (!imageData) {
+                return text;
+            }
+
+            const emptyChar = '‎';
+            let imageUrl = imageData.url;
+
+            text += parseMode.toLocaleLowerCase() === 'html'
+                ? `<a href="${imageUrl}>${emptyChar}</a>`
+                : `[${emptyChar}](${imageUrl})`;
+
+            return text
+        },
+
+        async updateMessage(messageId, text, options = {}) {
+            let textToTelegram = this.getTextWithImage(text, options['attach_image'] || false, options['parse_mode'] || settings.defaultParseMode);
+            if (options['attach_image']) {
+                delete options['attach_image'];
+            }
+            return telegram.editMessageText(chatId, messageId, null, textToTelegram, options);
         },
 
         async deleteMessage(messageId) {
             return telegram.deleteMessage(chatId, messageId);
         },
 
-        async sendMessage(name, text, topicIds) {
+        /**
+         *
+         * @param name
+         * @param text
+         * @param topicIds
+         * @param options {disable_web_page_preview: true|false, disable_notification: true|false, parse_mode: MarkdownV2|HTML}
+         *                  https://core.telegram.org/bots/api#formatting-options
+         * @returns {Promise<*|boolean>}
+         */
+        async sendMessage(name, text, topicIds, options = {}) {
             const db = await getDb();
             const messages = db.collection('messages');
+            const defaultOptions = {
+                'parse_mode': settings.defaultParseMode,
+            };
+            let imageData = false;
 
-            let apiMessage = await telegram.sendMessage(chatId, text);
+            options = Object.assign(defaultOptions, options);
+            if (options['attach_image']) {
+                imageData = options['attach_image'];
+                delete options['attach_image'];
+            }
+
+            let textToTelegram = this.getTextWithImage(text, imageData, options['parse_mode']);
+            let apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
             let chatLinkId = chatId.replace('@', '');
 
             let message = {
@@ -140,6 +234,8 @@ function KubrikBot(token) {
                 chatId,
                 name,
                 text,
+                imageData,
+                parseMode: options['parse_mode'],
                 url: `https://t.me/${chatLinkId}/${apiMessage.message_id}`,
                 topics: topicIds,
                 apiMessage,
@@ -167,13 +263,18 @@ function KubrikBot(token) {
     }
 }
 
-function getInstance(token) {
+async function getInstance(chatId, telegramToken, imgBBToken) {
     if (botInstance) {
         return botInstance;
     }
 
-    const BOT_TOKEN = token || process.env.BOT_TOKEN;
-    botInstance = new KubrikBot(BOT_TOKEN);
+    const CHAT_ID = chatId || process.env.CHAT_ID;
+    const BOT_TOKEN = telegramToken || process.env.BOT_TOKEN;
+    const IMGBB_TOKEN = imgBBToken || process.env.IMGBB_TOKEN;
+
+    const settings = await loadSettings(defaultSettings);
+
+    botInstance = new KubrikBot(CHAT_ID, BOT_TOKEN, IMGBB_TOKEN, settings);
     return botInstance;
 }
 

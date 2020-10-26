@@ -7,6 +7,7 @@ export default {
             isLoading: false,
             savedMessage: {},
             message: {},
+            image: null,
         }
     },
     methods: {
@@ -32,7 +33,7 @@ export default {
         },
         async saveMessage() {
             this.isSaving = true;
-            await this.$store.dispatch('saveMessage', this.message);
+            await this.$store.dispatch('saveMessage', {message: this.message, image: this.image});
             this.updateMessageState();
             this.isSaving = false;
             if (this.isNew) {

@@ -28,6 +28,7 @@ services:
       - MONGO_HOST=kubrik_mongo
       - MONGO_DB=kubrik
       - BOT_TOKEN=${BOT_TOKEN}
+      - IMGBB_TOKEN=${IMGBB_TOKEN}
       - CHAT_ID=${CHAT_ID}
     command: npm run debug
 
@@ -46,6 +47,7 @@ services:
       - MONGO_HOST=kubrik_mongo
       - MONGO_DB=kubrik
       - BOT_TOKEN=${BOT_TOKEN}
+      - IMGBB_TOKEN=${IMGBB_TOKEN}
       - CHAT_ID=${CHAT_ID}
     command: npm run bot_debug
 

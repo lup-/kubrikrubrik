@@ -2,12 +2,19 @@
     <div>
         <v-card class="mb-2">
             <v-card-title>{{message.name}}</v-card-title>
-            <v-card-text>
-                <v-chip v-for="topic in topics" :key="topic.id" class="mr-2">{{topic.name}}</v-chip>
-            </v-card-text>
-            <v-card-text>
-                {{message.text}}
-            </v-card-text>
+            <v-row>
+                <v-col cols="12" md="10">
+                    <v-card-text>
+                        <v-chip v-for="topic in topics" :key="topic.id" class="mr-2">{{topic.name}}</v-chip>
+                    </v-card-text>
+                    <v-card-text>
+                        {{message.text}}
+                    </v-card-text>
+                </v-col>
+                <v-col cols="12" md="2" v-if="message.imageData && message.imageData.url">
+                    <v-img max-width="80px" max-height="80px" :src="message.imageData.url"></v-img>
+                </v-col>
+            </v-row>
             <v-card-actions>
                 <v-btn color="red" outlined small @click.prevent.stop="deleteMessage">
                     <v-icon>mdi-delete</v-icon>

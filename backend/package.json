@@ -22,11 +22,14 @@
   "homepage": "https://github.com/lup-/jobbo#readme",
   "dependencies": {
     "@koa/router": "^9.4.0",
+    "imgbb-uploader": "^1.1.0",
     "koa": "^2.13.0",
     "koa-bodyparser": "^4.3.0",
+    "koa-multer": "^1.0.2",
     "moment": "^2.29.1",
     "mongodb": "^3.6.2",
     "shortid": "^2.2.15",
-    "telegraf": "^3.38.0"
+    "telegraf": "^3.38.0",
+    "temp-write": "^4.0.0"
   }
 }

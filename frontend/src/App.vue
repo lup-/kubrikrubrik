@@ -26,6 +26,14 @@
                         <v-list-item-title>Список сообщений</v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
+                <v-list-item  @click="$router.push({name: 'editSettings'})" :disabled="$route.name === 'editSettings'">
+                    <v-list-item-action>
+                        <v-icon>mdi-cog</v-icon>
+                    </v-list-item-action>
+                    <v-list-item-content>
+                        <v-list-item-title>Настройки</v-list-item-title>
+                    </v-list-item-content>
+                </v-list-item>
             </v-list>
         </v-navigation-drawer>
 

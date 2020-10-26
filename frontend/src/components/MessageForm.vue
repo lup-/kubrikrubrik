@@ -18,6 +18,7 @@
                         >
                         </v-autocomplete>
                         <v-textarea v-model="text" label="Текст поста"></v-textarea>
+                        <v-file-input v-model="image" label="Прикрепить картинку"></v-file-input>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
@@ -37,17 +38,24 @@
                 topics: [],
                 name: '',
                 text: '',
+                image: null,
             }
         },
         methods: {
             async sendMessage() {
-                await this.$store.dispatch('sendMessage', {topics: this.topics, text: this.text, name: this.name});
+                await this.$store.dispatch('sendMessage', {
+                    topics: this.topics,
+                    text: this.text,
+                    name: this.name,
+                    image: this.image,
+                });
                 this.resetForm();
             },
             resetForm() {
                 this.topics = [];
                 this.text = '';
                 this.name = '';
+                this.image = null;
             }
         },
         computed: {

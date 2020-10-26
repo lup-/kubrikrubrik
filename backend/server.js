@@ -3,9 +3,12 @@
 const Koa = require('koa');
 const Router = require('@koa/router');
 const bodyParser = require('koa-bodyparser');
+const multer = require('koa-multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 const topic = require('./routes/topic');
 const message = require('./routes/message');
+const settings = require('./routes/settings');
 
 const PORT = 3000;
 const HOST = '0.0.0.0';
@@ -23,11 +26,14 @@ router
 router
     .get('/api/message/:id', message.load)
     .post('/api/message/:id', message.load)
-    .post('/api/message', message.save)
+    .post('/api/message', upload.single('image'), message.save)
     .post('/api/message/list', message.list)
     .post('/api/message/delete', message.delete)
-    .post('/api/message/send', message.send);
+    .post('/api/message/send', upload.single('image'), message.send);
 
+router
+    .get('/api/settings', settings.load)
+    .post('/api/settings', settings.save);
 
 app
     .use(bodyParser({

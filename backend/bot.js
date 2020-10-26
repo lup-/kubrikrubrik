@@ -1,7 +1,8 @@
 const { Telegraf } = require('telegraf');
 
 const getKubrikBot = require('./modules/KubrikBot');
-const kubrikBot = getKubrikBot(process.env.BOT_TOKEN);
+let kubrikBot;
+let botPromise = getKubrikBot(process.env.CHAT_ID, process.env.BOT_TOKEN, process.env.IMGBB_TOKEN);
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 async function makeTopicMenu(parentId = null, hasBack = false) {
@@ -36,9 +37,9 @@ async function makeTopicMenu(parentId = null, hasBack = false) {
             if (parentId) {
                 navigationRow.push(m.callbackButton(kubrikBot.getSettings('homeButtonText'), 'home'));
                 navigationRow.push(m.callbackButton(kubrikBot.getSettings('linksButtonText'), `show_${parentId}`));
-                navigationRow.push(m.callbackButton(kubrikBot.getSettings('randomButtonText'), `random_${parentId}`));
             }
             else {
+                navigationRow.push(m.callbackButton(kubrikBot.getSettings('searchButtonText'), `search`));
                 navigationRow.push(m.callbackButton(kubrikBot.getSettings('randomButtonText'), 'random'));
             }
 
@@ -46,7 +47,6 @@ async function makeTopicMenu(parentId = null, hasBack = false) {
                 navigationRow.push(m.callbackButton(kubrikBot.getSettings('backButtonText'), 'back'));
             }
 
-            navigationRow.push(m.callbackButton(kubrikBot.getSettings('searchButtonText'), `search`));
 
             if (navigationRow.length > 0) {
                 buttonRows.push(navigationRow);
@@ -78,6 +78,12 @@ bot.start(async (ctx) => {
     let rootMenu = await makeRootMenu();
     ctx.reply( kubrikBot.getMessage('homeMessage'), rootMenu );
 });
+
+bot.command('reload', async ctx => {
+    await kubrikBot.reloadSettings();
+    ctx.reply( kubrikBot.getMessage('reloadMessage') );
+});
+bot.command('ping', ctx => ctx.reply('Уйди постылый, я в печали!'));
 
 bot.command('search', ctx => ctx.reply( kubrikBot.getMessage('searchMessage'), Telegraf.Extra.markdown() ))
 bot.action('search', ctx => ctx.reply( kubrikBot.getMessage('searchMessage'), Telegraf.Extra.markdown() ))
@@ -167,4 +173,7 @@ bot.on('text', async (ctx) => {
     return ctx.reply( makePostList(posts), Telegraf.Extra.markdown() );
 });
 
-bot.launch();
+botPromise.then(initedBot => {
+    kubrikBot = initedBot;
+    bot.launch();
+})

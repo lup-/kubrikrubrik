@@ -31,8 +31,20 @@ export default {
                 await dispatch('loadMessage', state.message.id);
             }
         },
-        async saveMessage({commit, dispatch}, message) {
-            let response = await axios.post(`/api/message`, {message});
+        async saveMessage({commit, dispatch}, {message, image}) {
+            let requestData = new FormData();
+            requestData.append('message', JSON.stringify(message) );
+            requestData.append('image', image);
+
+            let response = await axios.post( '/api/message',
+                requestData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                }
+            );
+
             await commit('setMessage', response.data.message);
             return dispatch('loadAllMessages');
         },
@@ -46,8 +58,21 @@ export default {
             return dispatch('reloadMessages');
         },
 
-        async sendMessage({commit, dispatch}, {topics, text, name}) {
-            let response = await axios.post(`/api/message/send`, {topics, text, name});
+        async sendMessage({commit, dispatch}, messageFields) {
+            let requestData = new FormData();
+            for (const fieldName in messageFields) {
+                requestData.append(fieldName, messageFields[fieldName]);
+            }
+
+            let response = await axios.post( '/api/message/send',
+                requestData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                }
+            );
+
             await commit('setMessage', response.data.message);
             return dispatch('loadAllMessages');
         }
