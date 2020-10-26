@@ -175,6 +175,10 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
         },
 
         getTextWithImage(text, imageData, parseMode) {
+            if (parseMode.toLocaleLowerCase().indexOf('markdown') !== -1) {
+                text = text.replace(/([\.\?\!\-])/g, "\\$1");
+            }
+
             if (!imageData) {
                 return text;
             }
