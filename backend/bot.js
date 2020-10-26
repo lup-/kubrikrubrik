@@ -170,7 +170,8 @@ bot.action('back', async (ctx) => {
 bot.on('text', async (ctx) => {
     let query = ctx.message.text;
     let posts = await kubrikBot.searchPostsByText(query);
-    return ctx.reply( makePostList(posts), Telegraf.Extra.markdown() );
+    let rootMenu = await makeRootMenu();
+    return ctx.reply( makePostList(posts), rootMenu, Telegraf.Extra.markdown() );
 });
 
 botPromise.then(initedBot => {
