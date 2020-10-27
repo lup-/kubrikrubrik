@@ -91,6 +91,8 @@ module.exports = {
             catch (e) {}
         }
 
+        messageFields.topics = kubrikBot.ensureTopicsArray(messageFields.topics);
+
         let updateResult = await messages.findOneAndReplace({id}, messageFields, {upsert: true, returnOriginal: false});
         let message = updateResult.value || false;
 

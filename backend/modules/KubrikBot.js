@@ -247,6 +247,23 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             return telegram.deleteMessage(chatId, messageId);
         },
 
+        ensureTopicsArray(topicIds) {
+            if (topicIds instanceof Array) {
+                return topicIds;
+            }
+
+            if (typeof(topicIds) === 'string') {
+                if (topicIds.indexOf(',') !== -1) {
+                    return topicIds.split(/\s*,\s*/);
+                }
+                else {
+                    return [topicIds];
+                }
+            }
+
+            return [];
+        },
+
         /**
          *
          * @param name
@@ -283,7 +300,7 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
                 imageData,
                 parseMode: options['parse_mode'],
                 url: `https://t.me/${chatLinkId}/${apiMessage.message_id}`,
-                topics: topicIds,
+                topics: this.ensureTopicsArray(topicIds),
                 apiMessage,
                 sent: true,
                 dateSent: moment().toISOString(),
