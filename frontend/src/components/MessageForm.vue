@@ -17,8 +17,33 @@
                                 no-data-text="Тем не найдено"
                         >
                         </v-autocomplete>
-                        <v-textarea v-model="text" label="Текст поста"></v-textarea>
-                        <v-file-input v-model="image" label="Прикрепить картинку"></v-file-input>
+                        <v-textarea
+                                v-model="text"
+                                label="Текст поста"
+                                :counter="image && image.length && !asLink > 0 ? 1024 : 4096"
+                        ></v-textarea>
+                        <v-checkbox
+                                v-model="asLink"
+                                label="Прикрепить изображение как ссылку"
+                                v-if="image && image.length === 1"
+                        ></v-checkbox>
+                        <v-file-input
+                                v-model="image"
+                                multiple
+                                chips
+                                clearable
+                                label="Прикрепить картинки"
+                        ></v-file-input>
+                        <v-checkbox
+                                v-model="useButton"
+                                label="Прикрепить кнопку"
+                        ></v-checkbox>
+                        <v-textarea
+                                v-model="buttonMessage"
+                                label="Текст сообщения для подписчиков"
+                                v-if="useButton"
+                        ></v-textarea>
+                        <v-text-field v-model="buttonText" label="Текст на кнопке" v-if="useButton"></v-text-field>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
@@ -38,16 +63,26 @@
                 topics: [],
                 name: '',
                 text: '',
+                messageLink: '',
                 image: null,
+                existing: false,
+                asLink: false,
+                useButton: false,
+                buttonText: '',
+                buttonMessage: '',
             }
         },
         methods: {
             async sendMessage() {
                 await this.$store.dispatch('sendMessage', {
                     topics: this.topics,
-                    text: this.text,
+                    messageLink: this.existing ? this.messageLink : false,
+                    text: this.existing ? false : this.text,
                     name: this.name,
                     image: this.image,
+                    asLink: this.image && this.image.length === 1 ? this.asLink : false,
+                    buttonText: this.useButton ? this.buttonText : false,
+                    buttonMessage: this.useButton ? this.buttonMessage : false,
                 });
                 this.resetForm();
             },
@@ -56,6 +91,9 @@
                 this.text = '';
                 this.name = '';
                 this.image = null;
+                this.asLink = false;
+                this.buttonText = '';
+                this.buttonMessage = '';
             }
         },
         computed: {

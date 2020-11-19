@@ -1,3 +1,4 @@
+const Markup = require('telegraf/markup');
 const Telegram = require('telegraf/telegram');
 const imgbbUploader = require('imgbb-uploader');
 const getDb = require('./Database');
@@ -11,7 +12,6 @@ let botInstance = false;
 
 const defaultSettings = {
     'buttonColumns': 2,
-    'defaultParseMode': 'MarkdownV2',
 
     'homeButtonText': '🏠 Домой',
     'linksButtonText': '📖 Показать ссылки',
@@ -27,6 +27,8 @@ const defaultSettings = {
     'postsListRowMessage': '- [%name%](%url%)',
     'randomPostMessage': '*Случайный пост*:\n[%name%](%url%)',
     'searchMessage': 'Отправь мне сообщение и я всегда найду подходящие ссылки:',
+    'notSubscribed': 'Чтобы увидеть скрытое сообщение, нужно подписаться на канал',
+    'errorMessage': 'Что-то пошло не так'
 };
 
 async function loadSettings() {
@@ -119,6 +121,34 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             return foundMessages;
         },
 
+        async getPostByMessageId(telegramId) {
+            const db = await getDb();
+            const messages = db.collection('messages');
+
+            let post = false;
+            try {
+                post = await messages.findOne({telegramId});
+            }
+            catch (e) {}
+
+            return post;
+        },
+
+        async getHiddenMessageForPost(messageId, chatId, userId) {
+            let subscriber = await telegram.getChatMember(chatId, userId);
+            let isSubscriber = subscriber && subscriber.status && ["creator", "administrator", "member"].indexOf(subscriber.status) !== -1;
+
+            if (!isSubscriber) {
+                return this.getMessage('notSubscribed');
+            }
+
+            let post = await this.getPostByMessageId(messageId);
+            let button = post && post.button;
+            return button && button.message
+                ? button.message
+                : this.getMessage('errorMessage');
+        },
+
         async searchPostsByText(text) {
             const db = await getDb();
             const messages = db.collection('messages');
@@ -174,52 +204,35 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             return uploadedImage;
         },
 
-        escapeMarkdown(text) {
+        escapeMarkdownToHTML(text) {
             //см. https://core.telegram.org/bots/api#markdownv2-style
 
             let pairedSymbols = [
-                {from: '*', to: '@@asterisk@@'},
-                {from: '__', to: '@@underline@@'},
-                {from: '_', to: '@@underscore@@'},
-                {from: '~', to: '@@strikethrough@@'},
-                {from: '```', to: '@@blockcode@@'},
-                {from: '`', to: '@@inlinecode@@'},
+                {from: '*', to: '<b>$1</b>'},
+                {from: '__', to: '<u>$1</u>'},
+                {from: '_', to: '<i>$1</i>'},
+                {from: '~', to: '<s>$1</s>'},
+                {from: '```', to: '<pre>$1</pre>'},
+                {from: '`', to: '<code>$1</code>'},
             ];
-
-            let allSymbols = pairedSymbols.concat([
-                {from: '[', to: '@@lsqb@@'},
-                {from: ']', to: '@@rsqb@@'},
-                {from: '(', to: '@@lcrb@@'},
-                {from: ')', to: '@@rcrb@@'},
-            ]);
 
             let safeText = text;
             for (const replacement of pairedSymbols) {
                 let fromRegexp = new RegExp("\\"+replacement.from+"(.*?)\\"+replacement.from, 'gms');
-                let toExp = replacement.to+'$1'+replacement.to;
+                let toExp = replacement.to;
 
+                safeText = safeText.replace( new RegExp("\\\\\\"+replacement.from, 'g'), ':%mask%:' );
                 safeText = safeText.replace( fromRegexp, toExp );
+                safeText = safeText.replace( /:%mask%:/g, replacement.from );
             }
 
-            safeText = safeText.replace(
-                /\[(.*?)\]\((.*?)\)/g,
-                '@@lsqb@@$1@@rsqb@@@@lcrb@@$2@@rcrb@@'
-            );
-
-            safeText = safeText.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
-
-            for (const replacement of allSymbols) {
-                let allRegexp = new RegExp( "\\"+replacement.to, 'g' );
-                safeText = safeText.replace(allRegexp, replacement.from);
-            }
+            safeText = safeText.replace(/\[(.*?)\]\((.*?)\)/gms, '<a href="$2">$1</a>');
 
             return safeText;
         },
 
-        getTextWithImage(text, imageData, parseMode) {
-            if (parseMode.toLocaleLowerCase().indexOf('markdown') !== -1) {
-                text = this.escapeMarkdown(text);
-            }
+        getTextWithImage(text, imageData) {
+            text = this.escapeMarkdownToHTML(text);
 
             if (!imageData) {
                 return text;
@@ -228,11 +241,8 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             const emptyChar = '‎';
             let imageUrl = imageData.url;
 
-            text = (parseMode.toLocaleLowerCase() === 'html'
-                ? `<a href="${imageUrl}>${emptyChar}</a>`
-                : `[${emptyChar}](${imageUrl})`)+text;
-
-            return text
+            text = `<a href="${imageUrl}">${emptyChar}</a> ${text}`;
+            return text;
         },
 
         async updateMessage(messageId, text, options = {}) {
@@ -273,23 +283,77 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
          *                  https://core.telegram.org/bots/api#formatting-options
          * @returns {Promise<*|boolean>}
          */
-        async sendMessage(name, text, topicIds, options = {}) {
-            const db = await getDb();
-            const messages = db.collection('messages');
-            const defaultOptions = {
-                'parse_mode': settings.defaultParseMode,
-            };
+        async sendMessage(name, text, button, topicIds, options = {}) {
+            const defaultOptions = {};
+
             let imageData = false;
+            let apiMessage = false;
+            let mediaGroup = false;
 
             options = Object.assign(defaultOptions, options);
-            if (options['attach_image']) {
-                imageData = options['attach_image'];
-                delete options['attach_image'];
+            options.parse_mode = 'HTML';
+
+            if (button) {
+                let keyboard = Markup.inlineKeyboard([
+                    Markup.callbackButton(button.text, 'hidden_action')
+                ]).extra();
+                options = Object.assign(options, keyboard);
             }
 
-            let textToTelegram = this.getTextWithImage(text, imageData, options['parse_mode']);
-            let apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
+            if (options['attach_link_image']) {
+                imageData = options['attach_link_image'];
+                delete options['attach_link_image'];
+
+                let textToTelegram = this.getTextWithImage(text, imageData);
+                apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
+                imageData = apiMessage.photo;
+            }
+            else if (options['attach_image']) {
+                let uploadedImage = options['attach_image'];
+                delete options['attach_image'];
+                options['caption'] = this.getTextWithImage(text, false);
+
+                apiMessage = await telegram.sendPhoto(chatId, {source: uploadedImage.buffer}, options);
+                imageData = apiMessage.photo;
+            }
+            else if (options['attach_album']) {
+                let uploadedImages = options['attach_album'];
+                delete options['attach_album'];
+
+                let media = uploadedImages.map(image => {
+                    return {media: {source: image.buffer}, type: 'photo'};
+                });
+
+                let mediaGroup = [];
+                let hasKeyboard = Boolean(options.reply_markup);
+                if (hasKeyboard) {
+                    mediaGroup = await telegram.sendMediaGroup(chatId, media, options);
+                    let textToTelegram = this.getTextWithImage(text, false);
+                    apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
+                }
+                else {
+                    media[0]['caption'] = this.getTextWithImage(text, false);
+                    mediaGroup = await telegram.sendMediaGroup(chatId, media, options);
+                    apiMessage = mediaGroup[0];
+                }
+
+                imageData = mediaGroup.reduce((files, message) => {
+                    return files.concat(message.photo || []);
+                }, []);
+            }
+            else {
+                let textToTelegram = this.getTextWithImage(text, imageData);
+                apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
+            }
+
+            return this.saveMessage(name, button, topicIds, apiMessage, imageData, mediaGroup, options);
+        },
+        async saveMessage(name, button, topicIds, apiMessage, imageData = false, mediaGroup = false, options = {}) {
+            const db = await getDb();
+            const messages = db.collection('messages');
+
             let chatLinkId = chatId.replace('@', '');
+            let text = apiMessage.text;
 
             let message = {
                 id: shortid.generate(),
@@ -297,7 +361,9 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
                 chatId,
                 name,
                 text,
+                button,
                 imageData,
+                mediaGroup,
                 parseMode: options['parse_mode'],
                 url: `https://t.me/${chatLinkId}/${apiMessage.message_id}`,
                 topics: this.ensureTopicsArray(topicIds),

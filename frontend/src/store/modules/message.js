@@ -61,7 +61,16 @@ export default {
         async sendMessage({commit, dispatch}, messageFields) {
             let requestData = new FormData();
             for (const fieldName in messageFields) {
-                requestData.append(fieldName, messageFields[fieldName]);
+                let fieldValue = messageFields[fieldName];
+                if (fieldValue instanceof Array) {
+                    for (const value of fieldValue) {
+                        requestData.append(fieldName, value);
+                    }
+                }
+                else {
+                    requestData.append(fieldName, fieldValue);
+                }
+
             }
 
             let response = await axios.post( '/api/message/send',

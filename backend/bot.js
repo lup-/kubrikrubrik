@@ -78,22 +78,19 @@ bot.start(async (ctx) => {
     let rootMenu = await makeRootMenu();
     ctx.reply( kubrikBot.getMessage('homeMessage'), rootMenu );
 });
-
 bot.command('reload', async ctx => {
     await kubrikBot.reloadSettings();
     ctx.reply( kubrikBot.getMessage('reloadMessage') );
 });
 bot.command('ping', ctx => ctx.reply('Уйди постылый, я в печали!'));
-
 bot.command('search', ctx => ctx.reply( kubrikBot.getMessage('searchMessage'), Telegraf.Extra.markdown() ))
-bot.action('search', ctx => ctx.reply( kubrikBot.getMessage('searchMessage'), Telegraf.Extra.markdown() ))
 
+bot.action('search', ctx => ctx.reply( kubrikBot.getMessage('searchMessage'), Telegraf.Extra.markdown() ))
 bot.action('home', async (ctx) => {
     let rootMenu = await makeRootMenu();
     //ctx.session.path = [];
     return ctx.editMessageText( kubrikBot.getMessage('homeMessage'), rootMenu );
 });
-
 bot.action( /^goto_(.+)/, async (ctx) => {
     let parentId = ctx.match[1];
     //let hasBack = ctx.session.path.length > 0;
@@ -108,7 +105,6 @@ bot.action( /^goto_(.+)/, async (ctx) => {
 
     return ctx.editMessageText( kubrikBot.getMessage('topicMessage', topic), menu);
 });
-
 bot.action( /^show_(.+)/, async (ctx) => {
     let parentId = ctx.match[1];
     //let hasBack = ctx.session.path.length > 0;
@@ -122,7 +118,6 @@ bot.action( /^show_(.+)/, async (ctx) => {
                     ? kubrikBot.getMessage('topicMessage', topic)
                     : kubrikBot.getMessage('homeMessage'), menu, Telegraf.Extra.markdown() ));
 });
-
 bot.action( /^random_(.+)/, async (ctx) => {
     let parentId = ctx.match[1] || null;
     let topic = parentId ? await kubrikBot.getTopic(parentId) : false;
@@ -135,7 +130,6 @@ bot.action( /^random_(.+)/, async (ctx) => {
                     ? kubrikBot.getMessage('topicMessage', topic)
                     : kubrikBot.getMessage('homeMessage'), menu, Telegraf.Extra.markdown() ));
 });
-
 bot.action( 'random', async (ctx) => {
     let post = await kubrikBot.randomPost();
     let rootMenu = await makeRootMenu();
@@ -143,7 +137,6 @@ bot.action( 'random', async (ctx) => {
     return ctx.reply( kubrikBot.getMessage('randomPostMessage', post), Telegraf.Extra.markdown())
         .then(() => ctx.reply( kubrikBot.getMessage('homeMessage'), rootMenu, Telegraf.Extra.markdown() ));
 });
-
 bot.action('back', async (ctx) => {
     //let hasBackNow = ctx.session.path.length > 0;
     let hasBackNow = false;
@@ -167,6 +160,9 @@ bot.action('back', async (ctx) => {
     return ctx.editMessageText( title, menu );
 });
 
+bot.action('hidden', async ctx => {
+});
+
 bot.on('text', async (ctx) => {
     let query = ctx.message.text;
     let posts = await kubrikBot.searchPostsByText(query);
@@ -174,7 +170,34 @@ bot.on('text', async (ctx) => {
     return ctx.reply( makePostList(posts), rootMenu, Telegraf.Extra.markdown() );
 });
 
-botPromise.then(initedBot => {
-    kubrikBot = initedBot;
-    bot.launch();
-})
+bot.on('callback_query', async (ctx, next) => {
+    let query = ctx.update && ctx.update.callback_query
+        ? ctx.update.callback_query
+        : false;
+
+    if (!query) {
+        return next();
+    }
+
+    let action = query.data;
+    let chat = query && query.message && query.message.chat
+        ? query.message.chat
+        : false;
+
+    let hiddenButtonPressedInChannel = action === 'hidden_action' && chat && chat.type === 'channel';
+    if (!hiddenButtonPressedInChannel) {
+        return next();
+    }
+
+    let message = await kubrikBot.getHiddenMessageForPost(query.message.message_id, query.message.chat.id, query.from.id);
+    return ctx.answerCbQuery(message, true);
+});
+
+bot.catch((e) => console.log(e));
+
+Promise.all([botPromise, bot.telegram.getMe()])
+    .then(([initedBot, botInfo]) => {
+        kubrikBot = initedBot;
+        bot.options.username = botInfo.username;
+        bot.launch();
+    });

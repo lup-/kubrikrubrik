@@ -26,10 +26,10 @@ router
 router
     .get('/api/message/:id', message.load)
     .post('/api/message/:id', message.load)
-    .post('/api/message', upload.single('image'), message.save)
+    .post('/api/message', upload.array('image'), message.save)
     .post('/api/message/list', message.list)
     .post('/api/message/delete', message.delete)
-    .post('/api/message/send', upload.single('image'), message.send);
+    .post('/api/message/send', upload.array('image'), message.send);
 
 router
     .get('/api/settings', settings.load)

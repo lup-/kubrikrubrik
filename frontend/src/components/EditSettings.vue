@@ -38,7 +38,6 @@
                 settingValues: {},
                 settings: [
                     {title: 'Сколько столбцов с кнопками категорий', code: 'buttonColumns'},
-                    {title: 'Формат сообщений', code: 'defaultParseMode', hint: '"MarkdownV2" или "HTML"'},
                     {title: 'Текст кнопки "Домой"', code: 'homeButtonText', hint: 'Картинки для кнопок: https://apps.timwhitlock.info/emoji/tables/unicode'},
                     {title: 'Текст кнопки ссылок в категории', code: 'linksButtonText'},
                     {title: 'Текст кнопки случайного поста', code: 'randomButtonText'},
@@ -52,6 +51,8 @@
                     {title: 'Ряд в списке постов', code: 'postsListRowMessage', type: 'text', hint: "Можно использовать %id%, %telegramId%, %chatId%, %name%, %text%, %url%"},
                     {title: 'Пост со случайным сообщением', code: 'randomPostMessage', type: 'text', hint: "Можно использовать %id%, %telegramId%, %chatId%, %name%, %text%, %url%"},
                     {title: 'Поск с объяснениями про поиск', code: 'searchMessage', type: 'text'},
+                    {title: 'Сообщение секретной кнопки всем, кто не подписан', code: 'notSubscribed', type: 'text'},
+                    {title: 'Сообщение об ошибке', code: 'errorMessage', type: 'text'},
                 ]
             }
         },

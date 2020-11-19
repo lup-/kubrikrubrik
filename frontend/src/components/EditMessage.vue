@@ -18,9 +18,7 @@
                                     no-data-text="Тем не найдено"
                             >
                             </v-autocomplete>
-                            <v-textarea v-model="message.text" label="Текст поста"></v-textarea>
-                            <v-img :src="message.imageData.url" max-width="50%" v-if="hasImage"></v-img>
-                            <v-file-input v-model="image" :label="hasImage ? 'Поменять картинку' : 'Прикрепить картинку'"></v-file-input>
+                            <v-textarea v-model="message.text" label="Текст поста для бота"></v-textarea>
                         </v-form>
                     </v-card-text>
                     <v-card-actions>

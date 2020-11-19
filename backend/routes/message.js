@@ -46,49 +46,26 @@ module.exports = {
         const kubrikBot = await getKubrikBot(process.env.CHAT_ID, process.env.BOT_TOKEN, process.env.IMGBB_TOKEN);
 
         let messageFields = JSON.parse(ctx.req.body.message) || {};
+        let buttonFields = ctx.req.body.button && ctx.req.body.button !== 'false'
+            ? JSON.parse(ctx.req.body.button) || false
+            : false;
         let messageText = messageFields.text;
-        let uploadedImage = ctx.req.file;
 
-        let options = {
-            parse_mode: messageFields.parseMode || kubrikBot.getSettings('defaultParseMode'),
-        };
+        const id = messageFields.id;
+        let isNew = !Boolean(id);
+
+        if (!isNew) {
+            messageFields = await messages.findOne({id}).toArray();
+            messageFields.text = messageText;
+            messageFields.button = buttonFields;
+        }
 
         if (!messageFields.id) {
             messageFields.id = shortid.generate();
         }
 
-        const id = messageFields.id;
-        let isNew = !Boolean(id);
-
         if (messageFields._id) {
             delete messageFields._id;
-        }
-
-        if (uploadedImage) {
-            let hosting = await kubrikBot.uploadImage(uploadedImage.buffer);
-
-            let file = {
-                name: uploadedImage.originalname,
-                type: uploadedImage.mimetype,
-                size: uploadedImage.size,
-                url: hosting.url,
-                hosting,
-            }
-
-            options['attach_image'] = file;
-            messageFields.imageData = file;
-        }
-
-        if (!messageFields['delete_image'] && !options['attach_image'] && messageFields.imageData) {
-            options['attach_image'] = messageFields.imageData;
-        }
-
-        if (!isNew) {
-            try {
-                let updatedApiMessage = kubrikBot.updateMessage(messageFields.telegramId, messageText, options);
-                messageFields.apiMessage = updatedApiMessage;
-            }
-            catch (e) {}
         }
 
         messageFields.topics = kubrikBot.ensureTopicsArray(messageFields.topics);
@@ -133,11 +110,17 @@ module.exports = {
         const text = ctx.req.body.text;
         const name = ctx.req.body.name || '';
         const topicIds = ctx.req.body.topics;
-        const uploadedImage = ctx.req.file;
+        const uploadedImages = ctx.req.files;
+        let button = ctx.req.body.buttonText !== 'false' && ctx.req.body.buttonMessage !== 'false'
+            ? { text: ctx.req.body.buttonText, message: ctx.req.body.buttonMessage }
+            : false;
+
+        const sendAsLink = ctx.req.body.asLink === "true"  || ctx.req.body.asLink === true || false;
+        let uploadedImage = uploadedImages ? uploadedImages[0] : false;
 
         let options = {};
 
-        if (uploadedImage) {
+        if (sendAsLink && uploadedImage && uploadedImages.length === 1) {
             let hosting = await kubrikBot.uploadImage(uploadedImage.buffer);
 
             let file = {
@@ -148,7 +131,13 @@ module.exports = {
                 hosting,
             }
 
-            options['attach_image'] = file;
+            options['attach_link_image'] = file;
+        }
+        else if (uploadedImage && uploadedImages.length === 1) {
+            options['attach_image'] = uploadedImage;
+        }
+        else if (uploadedImages && uploadedImages.length > 1) {
+            options['attach_album'] = uploadedImages;
         }
 
         if (!topicIds || !text) {
@@ -156,7 +145,7 @@ module.exports = {
             return next();
         }
 
-        let message = await kubrikBot.sendMessage(name, text, topicIds, options);
+        let message = await kubrikBot.sendMessage(name, text, button, topicIds, options);
 
         ctx.body = {message};
         return next();
