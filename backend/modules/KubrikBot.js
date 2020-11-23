@@ -121,6 +121,19 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             return foundMessages;
         },
 
+        async getPostById(id) {
+            const db = await getDb();
+            const messages = db.collection('messages');
+
+            let post = false;
+            try {
+                post = await messages.findOne({id});
+            }
+            catch (e) {}
+
+            return post;
+        },
+
         async getPostByMessageId(telegramId) {
             const db = await getDb();
             const messages = db.collection('messages');
@@ -134,19 +147,15 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
             return post;
         },
 
-        async getHiddenMessageForPost(messageId, chatId, userId) {
+        async isSubscriber(chatId, userId) {
             let subscriber = await telegram.getChatMember(chatId, userId);
-            let isSubscriber = subscriber && subscriber.status && ["creator", "administrator", "member"].indexOf(subscriber.status) !== -1;
+            return subscriber && subscriber.status && ["creator", "administrator", "member"].indexOf(subscriber.status) !== -1;
+        },
 
-            if (!isSubscriber) {
-                return this.getMessage('notSubscribed');
-            }
-
+        async getButtonForPost(messageId) {
             let post = await this.getPostByMessageId(messageId);
             let button = post && post.button;
-            return button && button.message
-                ? button.message
-                : this.getMessage('errorMessage');
+            return button ? button : false;
         },
 
         async searchPostsByText(text) {

@@ -38,12 +38,14 @@
                                 v-model="useButton"
                                 label="Прикрепить кнопку"
                         ></v-checkbox>
+
+                        <v-text-field v-model="buttonText" label="Текст на кнопке" v-if="useButton"></v-text-field>
+                        <v-text-field v-model="buttonUrl" label="Ссылка кнопки (доступ через бота)" v-if="useButton"></v-text-field>
                         <v-textarea
                                 v-model="buttonMessage"
-                                label="Текст сообщения для подписчиков"
+                                label="Или текст сообщения для подписчиков"
                                 v-if="useButton"
                         ></v-textarea>
-                        <v-text-field v-model="buttonText" label="Текст на кнопке" v-if="useButton"></v-text-field>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
@@ -68,6 +70,7 @@
                 existing: false,
                 asLink: false,
                 useButton: false,
+                buttonUrl: '',
                 buttonText: '',
                 buttonMessage: '',
             }
@@ -81,6 +84,7 @@
                     name: this.name,
                     image: this.image,
                     asLink: this.image && this.image.length === 1 ? this.asLink : false,
+                    buttonUrl: /^http/i.test(this.buttonUrl) ? this.buttonUrl || false : false,
                     buttonText: this.useButton ? this.buttonText : false,
                     buttonMessage: this.useButton ? this.buttonMessage : false,
                 });
@@ -92,6 +96,7 @@
                 this.name = '';
                 this.image = null;
                 this.asLink = false;
+                this.buttonUrl = '';
                 this.buttonText = '';
                 this.buttonMessage = '';
             }

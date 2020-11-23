@@ -111,8 +111,12 @@ module.exports = {
         const name = ctx.req.body.name || '';
         const topicIds = ctx.req.body.topics;
         const uploadedImages = ctx.req.files;
-        let button = ctx.req.body.buttonText !== 'false' && ctx.req.body.buttonMessage !== 'false'
-            ? { text: ctx.req.body.buttonText, message: ctx.req.body.buttonMessage }
+        let button = ctx.req.body.buttonText !== 'false'
+            ? {
+                text: ctx.req.body.buttonText,
+                message: ctx.req.body.buttonMessage !== 'false' ? ctx.req.body.buttonMessage : false,
+                url: ctx.req.body.buttonUrl !== 'false' ? ctx.req.body.buttonUrl : false,
+            }
             : false;
 
         const sendAsLink = ctx.req.body.asLink === "true"  || ctx.req.body.asLink === true || false;

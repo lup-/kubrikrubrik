@@ -72,6 +72,22 @@ function makeRootMenu() {
 }
 
 bot.start(async (ctx) => {
+    let ref =ctx.update.message.text.indexOf(' ') !== -1
+        ? ctx.update.message.text.replace('/start ', '')
+        : false;
+
+    if (ref) {
+        let isSecretMessageCode = ref.indexOf('post_') === 0;
+        if (isSecretMessageCode) {
+            let postId = ref.replace('post_', '');
+            let post = await kubrikBot.getPostById(postId);
+            if (post && post.button && post.button.url) {
+                let text = `${post.button.message}\n\n${post.button.url}`;
+                await ctx.reply(text);
+            }
+        }
+    }
+
     const chatInfo = ctx.update.message.chat;
     await kubrikBot.saveChat(chatInfo);
 
@@ -160,9 +176,6 @@ bot.action('back', async (ctx) => {
     return ctx.editMessageText( title, menu );
 });
 
-bot.action('hidden', async ctx => {
-});
-
 bot.on('text', async (ctx) => {
     let query = ctx.message.text;
     let posts = await kubrikBot.searchPostsByText(query);
@@ -189,8 +202,21 @@ bot.on('callback_query', async (ctx, next) => {
         return next();
     }
 
-    let message = await kubrikBot.getHiddenMessageForPost(query.message.message_id, query.message.chat.id, query.from.id);
-    return ctx.answerCbQuery(message, true);
+    let isSubscriber = await kubrikBot.isSubscriber(query.message.chat.id, query.from.id);
+    if (isSubscriber) {
+        let button = await kubrikBot.getButtonForPost(query.message.message_id, query.message.chat.id, query.from.id);
+
+        if (button.url) {
+            let post = await kubrikBot.getPostByMessageId(query.message.message_id);
+            let botUrl = `https://t.me/${ctx.botInfo.username}?start=post_${post.id}`;
+            return ctx.answerCbQuery(button.message, true, {url: botUrl});
+        } else {
+            return ctx.answerCbQuery(button.message, true);
+        }
+    }
+    else {
+        return ctx.answerCbQuery(kubrikBot.getMessage('notSubscribed'), true);
+    }
 });
 
 bot.catch((e) => console.log(e));
