@@ -342,6 +342,7 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
                 }
                 else {
                     media[0]['caption'] = this.getTextWithImage(text, false);
+                    media[0]['parse_mode'] = options.parse_mode;
                     mediaGroup = await telegram.sendMediaGroup(chatId, media, options);
                     apiMessage = mediaGroup[0];
                 }
