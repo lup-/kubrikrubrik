@@ -7,6 +7,7 @@ const shortid = require('shortid');
 const moment = require('moment');
 const tempWrite = require('temp-write');
 const fs = require('fs');
+const markdown = require( "markdown" ).markdown;
 
 let botInstance = false;
 
@@ -214,30 +215,31 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
         },
 
         escapeMarkdownToHTML(text) {
-            //см. https://core.telegram.org/bots/api#markdownv2-style
+            let html = markdown.toHTML( text );
 
-            let pairedSymbols = [
-                {from: '*', to: '<b>$1</b>'},
-                {from: '__', to: '<u>$1</u>'},
-                {from: '_', to: '<i>$1</i>'},
-                {from: '~', to: '<s>$1</s>'},
-                {from: '```', to: '<pre>$1</pre>'},
-                {from: '`', to: '<code>$1</code>'},
-            ];
+            let tags = html.match(/\<([^ \/>]*) *[^>]*>/gi).map(parsedTag => {
+                let tagData = parsedTag.match(/<\/?([^ >]+)[^>]*>/i);
+                if (tagData) {
+                    let tagName = tagData[1];
+                    if (tagName) {
+                        return tagName.toLowerCase();
+                    }
+                }
+                return null;
+            }).filter(tag => tag !== null).filter((tag, index, allTags) => allTags.indexOf(tag) === index);
 
-            let safeText = text;
-            for (const replacement of pairedSymbols) {
-                let fromRegexp = new RegExp("\\"+replacement.from+"(.*?)\\"+replacement.from, 'gms');
-                let toExp = replacement.to;
+            let replaceTags = [{from: 'em', to: 'b'}];
+            replaceTags.map(replaceData => {
+                html = html.replace( new RegExp('<(\/?)'+replaceData.from+'( *[^>]*)>', 'g'), '<$1'+replaceData.to+'$2>' );
+            });
 
-                safeText = safeText.replace( new RegExp("\\\\\\"+replacement.from, 'g'), ':%mask%:' );
-                safeText = safeText.replace( fromRegexp, toExp );
-                safeText = safeText.replace( /:%mask%:/g, replacement.from );
-            }
+            let allowedTags = ['b', 'strong', 'em', 'i', 'u', 'ins', 's', 'strike', 'del', 'a', 'code', 'pre'];
+            let removeTags = tags.filter(value => !allowedTags.includes(value));
+            removeTags.map(tag => {
+                html = html.replace( new RegExp('<\/?'+tag+'[^>]*>', 'g'), '');
+            });
 
-            safeText = safeText.replace(/\[(.*?)\]\((.*?)\)/gms, '<a href="$2">$1</a>');
-
-            return safeText;
+            return html;
         },
 
         getTextWithImage(text, imageData) {
