@@ -356,14 +356,13 @@ function KubrikBot(chatId, telegramToken, imgbbToken, settings) {
                 apiMessage = await telegram.sendMessage(chatId, textToTelegram, options);
             }
 
-            return this.saveMessage(name, button, topicIds, apiMessage, imageData, mediaGroup, options);
+            return this.saveMessage(name, text, button, topicIds, apiMessage, imageData, mediaGroup, options);
         },
-        async saveMessage(name, button, topicIds, apiMessage, imageData = false, mediaGroup = false, options = {}) {
+        async saveMessage(name, text, button, topicIds, apiMessage, imageData = false, mediaGroup = false, options = {}) {
             const db = await getDb();
             const messages = db.collection('messages');
 
             let chatLinkId = chatId.replace('@', '');
-            let text = apiMessage.text;
 
             let message = {
                 id: shortid.generate(),
